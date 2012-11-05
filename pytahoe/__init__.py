@@ -1,4 +1,4 @@
-import urllib, urllib2, json, time, os, re, requests
+import json, time, os, re, requests
 
 try:
 	from fs.contrib.tahoelafs import TahoeLAFS
@@ -35,17 +35,12 @@ class Filesystem:
 			url = url[:-1]
 		
 		try:
-			result = urllib.urlopen("%s/statistics?t=json" % url).read()
-		except urllib.URLError:
-			raise FilesystemException("The provided WAPI URL is not reachable.")
+			data = requests.get("%s/statistics?t=json" % url).json
+		except requests.exceptions.RequestException:
+			raise FilesystemException("The provided WAPI URL is either not reachable, or not running a recent version of Tahoe-LAFS.")
 		
-		try:
-			data = json.loads(result)
-		except ValueError:
-			raise FilesystemException("The provided WAPI URL is either not running Tahoe-LAFS, or running a version that is too old.")
-		
-		if "node.uptime" not in data['stats']:
-			raise FilesystemException("The provided WAPI URL is either not running Tahoe-LAFS, or running a version that is too old.")
+		if data is None:
+			raise FilesystemException("The provided URL is not running a recent version of Tahoe-LAFS.")
 		
 		self.url = url
 		self.start_date = time.time() - data['stats']['node.uptime']
