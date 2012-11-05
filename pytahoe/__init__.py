@@ -1,4 +1,4 @@
-import json, time, os, re, requests
+import json, time, os, re, requests, urllib
 
 try:
 	from fs.contrib.tahoelafs import TahoeLAFS
@@ -126,8 +126,11 @@ class Directory:
 		self.filesystem = filesystem
 		self.uri = uri
 		
-		if data == None:
-			data = self.filesystem.standard_request("uri/%s" % urllib.quote(uri))
+		if data is None:
+			data = requests.get("%s/uri/%s" % (this.filesystem.url, urllib.quote(uri))).json
+			
+			if data is None:
+				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "dirnode" in data:
 			details = data[1]
