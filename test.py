@@ -11,4 +11,4 @@ import pytahoe
 #print fs.upload("test.py")
 
 fs = pytahoe.Filesystem("http://tahoe.ccnmtl.columbia.edu/")
-fs.Directory("URI:DIR2:cbk47f5lybaj5qh6bm6eedezwe:m525plntx47u44xvf44r6rliec3gp6yeyio7olndibtke75zb6fa").mount("test")
+print fs.Directory("URI:DIR2:cbk47f5lybaj5qh6bm6eedezwe:m525plntx47u44xvf44r6rliec3gp6yeyio7olndibtke75zb6fa").children
