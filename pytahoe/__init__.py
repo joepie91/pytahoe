@@ -22,6 +22,9 @@ class ObjectException(Exception):
 class UploadException(Exception):
 	pass
 
+class DependencyException(Exception):
+	pass
+
 class Filesystem:
 	def __init__(self, url="http://localhost:3456/"):
 		if url.strip() == "":
