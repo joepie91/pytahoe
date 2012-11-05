@@ -107,6 +107,40 @@ class Filesystem:
 				
 		file_uri = requests.put("%s/uri" % self.url, data=filedata.read()).text
 		return self.File(file_uri)
+		
+	def attach(self, obj, directory, filename, **kwargs):
+		try:
+			obj.readcap
+		except KeyError:
+			raise ObjectException("No valid object was specified.")
+		
+		try:
+			directory.readcap
+		except KeyError:
+			raise ObjectException("No valid tahoepy.Directory was specified.")
+		
+		if directory.writable == False:
+			raise ObjectException("The specified directory is not writable.")
+		
+		filename = self._sanitize_filename(filename)
+		
+		if "writable" in kwargs:
+			if kwargs["writable"] == True:
+				if obj.writable == True:
+					filecap = obj.writecap
+				else:
+					raise ObjectException("Cannot attach object as writable file; the object is not writable.")
+			else:
+				filecap = obj.readcap
+		else:
+			filecap = obj.readcap
+			
+		result = requests.put("%s/uri/%s/%s?t=uri&replace=false" % (self.url, directory.writecap, filename), data=filecap)
+		
+		if result.status_code == 200:
+			return filename
+		else:
+			raise ObjectException("Could not attach object - the request failed with code %d." % result.status_code)
 
 class Directory:
 	mutable = False
@@ -188,6 +222,9 @@ class Directory:
 					filename = ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(15))
 			else:
 				raise UploadException("The given file is not a valid string or file object.")
+	
+	def attach(self, obj, filename, **kwargs):
+		return self.filesystem.attach(obj, self, filename, **kwargs)
 
 class File:
 	mutable = False
@@ -237,3 +274,6 @@ class File:
 			mutable = "immutable"
 		
 		return "<pytahoe.File %s (%s, %s)>" % (self.uri, mutable, state)
+		
+	def attach(self, directory, filename, **kwargs):
+		return self.filesystem.attach(self, directory, filename, **kwargs)
