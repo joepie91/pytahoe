@@ -14,25 +14,38 @@ else:
 
 
 class PytahoeException(Exception):
+	"""Generic base class for pytahoe-related exceptions."""
 	pass
 
 class FilesystemException(PytahoeException):
+	"""Exception class for 'filesystem exceptions'; ie. the WAPI being unreachable or otherwise non-functional."""
 	pass
 
 class ObjectException(PytahoeException):
+	"""Exception class for object-related exceptions (files and directories)."""
 	pass
 
 class UploadException(PytahoeException):
+	"""Exception class specifically for errors encountered during upload of files."""
 	pass
 
 class DependencyException(PytahoeException):
+	"""Exception class for missing or non-functional dependencies."""
 	pass
 
 class MountException(PytahoeException):
+	"""Exception class for errors encountered during mounting of a directory."""
 	pass
 
 class Filesystem:
+	"""Represents a Tahoe-LAFS 'filesystem' or 'grid'."""
+	
 	def __init__(self, url="http://localhost:3456/"):
+		"""Creates a new Filesystem object representing a Tahoe-LAFS grid.
+		
+		Keyword arguments:
+		url -- The URL for the WAPI that should be used for this Filesystem.
+		"""
 		if url.strip() == "":
 			raise FilesystemException("You must specify a Tahoe-LAFS WAPI URL.")
 		
@@ -54,10 +67,15 @@ class Filesystem:
 	def __repr__(self):
 		return "<pytahoe.Filesystem %s>" % self.url
 	
-	def standard_request(self, destination, data=None):
-		return self.do_json_request("/%s?t=json" % destination, data)
-	
 	def Directory(self, uri, data=None):
+		"""Create and return a new Directory object for the specified URI for this filesystem.
+		
+		uri -- The URI to represent
+		
+		Keyword arguments:
+		data -- The data, if any, to populate this object with - if none is given, the data will be retrieved from the filesystem.
+		"""
+		
 		if data is None:
 			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
 			
@@ -67,6 +85,14 @@ class Filesystem:
 		return Directory(self, uri, data)
 	
 	def File(self, uri, data=None):
+		"""Create and return a new File object for the specified URI for this filesystem.
+		
+		uri -- The URI to represent
+		
+		Keyword arguments:
+		data -- The data, if any, to populate this object with - if none is given, the data will be retrieved from the filesystem.
+		"""
+		
 		if data is None:
 			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
 			
@@ -76,6 +102,14 @@ class Filesystem:
 		return File(self, uri, data)
 	
 	def Object(self, uri, data=None):
+		"""Create and return a new Directory or File object for this filesystem, depending on what the URI represents.
+		
+		uri -- The URI to represent
+		
+		Keyword arguments:
+		data -- The data, if any, to populate this object with - if none is given, the data will be retrieved from the filesystem.
+		"""
+		
 		if data is None:
 			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
 			
@@ -90,13 +124,21 @@ class Filesystem:
 			raise ObjectException("The specified object does not appear to exist.")
 	
 	def create_directory(self):
+		"""Create a new directory node in the filesystem, and return a Directory object representing it."""
+		
 		result = self.do_request("/uri?t=mkdir", {})
 		return self.Directory(result)
 	
 	def _sanitize_filename(self, name):
+		"""Strip all potentially unsafe characters from the given filename."""
 		return re.sub("[^a-zA-Z0-9 $_.+!*'(),-]+", "", name)
 	
 	def upload(self, filedata):
+		"""Uploads a file to the storage grid and returns a File object representing it.
+		
+		filedata -- Either a file-like object, or the path to a file.
+		"""
+		
 		if type(filedata) is str:
 			try:
 				filedata = open(filedata, "rb")
@@ -109,6 +151,16 @@ class Filesystem:
 		return self.File(file_uri)
 		
 	def attach(self, obj, directory, filename, **kwargs):
+		"""Attaches an object to a file node in the filesystem.
+		
+		obj -- The object to attach.
+		directory -- The directory in the filesystem to place the object in.
+		filename -- The filename to use for the object.
+		
+		Keyword arguments:
+		writable -- A boolean indicating whether the object should be attached as a writeable node. This will fail if a read-only cap is used.
+		"""
+		
 		try:
 			obj.readcap
 		except KeyError:
@@ -143,11 +195,21 @@ class Filesystem:
 			raise ObjectException("Could not attach object - the request failed with code %d." % result.status_code)
 
 class Directory:
+	"""Represents a directory node in a Tahoe-LAFS grid."""
 	mutable = False
 	writeable = False
 	children = {}
 	
 	def __init__(self, filesystem, uri, data=None):
+		"""Creates a new Directory object.
+		
+		filesystem -- The Filesystem this Directory belongs to.
+		uri -- The original URI for the Directory.
+		
+		Keyword arguments:
+		data -- The data, if any, to populate the object with. Will be retrieved from the filesystem if not specified.
+		"""
+		
 		self.filesystem = filesystem
 		self.uri = uri
 		
@@ -183,6 +245,8 @@ class Directory:
 			raise ObjectException("The specified object is not a directory.")
 	
 	def __repr__(self):
+		"""Returns a string representation for this Directory."""
+		
 		if self.writable == True:
 			state = "writable"
 		else:
@@ -191,6 +255,11 @@ class Directory:
 		return "<pytahoe.Directory %s (%s)>" % (self.uri, state)
 	
 	def mount(self, mountpoint):
+		"""Mount this Directory to a mount point on the actual filesystem.
+		
+		mountpoint -- The point to mount the Directory on (on Windows, this will be a drive letter).
+		"""
+		
 		global fs_available
 		
 		if fs_available == False:
@@ -211,6 +280,14 @@ class Directory:
 			raise MountException("Could not mount the directory because a FUSE error was encountered: %s" % e.message)
 	
 	def upload(self, filedata, filename=None):
+		"""Upload a file to the storage grid and return a File object representing it.
+		
+		filedata -- Either a file-like object or the path to a file.
+		
+		Keyword arguments:
+		filename -- The filename to store this file under. If not specified, a random filename will be generated.
+		"""
+		
 		if filename is None:
 			if type(filedata) is str:
 				filename = self._sanitize_filename(os.path.basename(filedata))
@@ -223,14 +300,33 @@ class Directory:
 			else:
 				raise UploadException("The given file is not a valid string or file object.")
 	
-	def attach(self, obj, filename, **kwargs):
-		return self.filesystem.attach(obj, self, filename, **kwargs)
+	def attach(self, directory, filename=None, **kwargs):
+		"""Attach this Directory to a Directory in the filesystem.
+		
+		directory -- The Directory to attach this Directory to.
+		
+		Keyword arguments:
+		filename -- The filename to attach this Directory under.
+		writable -- Attach the Directory as a writable directory in the filesystem. This will fail if a read-only cap is used.
+		"""
+		
+		return self.filesystem.attach(self, directory, filename, **kwargs)
 
 class File:
+	"""Represents a file node in a Tahoe-LAFS grid."""
 	mutable = False
 	writable = False
 	
 	def __init__(self, filesystem, uri, data=None):
+		"""Create a new File object.
+		
+		filesystem -- The filesystem this File belongs to.
+		uri -- The original URI that this File represents.
+		
+		Keyword arguments:
+		data -- The data, if any, to populate the object with. Will be retrieved from the filesystem if not specified.
+		"""
+		
 		self.filesystem = filesystem
 		self.uri = uri
 		
@@ -263,6 +359,8 @@ class File:
 			raise ObjectException("The specified object is not a file.")
 	
 	def __repr__(self):
+		"""Return a string representation of the File."""
+		
 		if self.writable == True:
 			state = "writable"
 		else:
@@ -275,5 +373,14 @@ class File:
 		
 		return "<pytahoe.File %s (%s, %s)>" % (self.uri, mutable, state)
 		
-	def attach(self, directory, filename, **kwargs):
+	def attach(self, directory, filename=None, **kwargs):
+		"""Attach this File to a Directory in the filesystem.
+		
+		directory -- The Directory to attach this File to.
+		
+		Keyword arguments:
+		filename -- The filename to attach this File under.
+		writable -- Attach the File as a writable file in the filesystem. This will fail if a read-only cap is used.
+		"""
+		
 		return self.filesystem.attach(self, directory, filename, **kwargs)
