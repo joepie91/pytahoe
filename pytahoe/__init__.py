@@ -45,6 +45,9 @@ class Filesystem:
 		self.url = url
 		self.start_date = time.time() - data['stats']['node.uptime']
 	
+	def __repr__(self):
+		return "<pytahoe.Filesystem %s>" % self.url
+	
 	def standard_request(self, destination, data=None):
 		return self.do_json_request("/%s?t=json" % destination, data)
 		
