@@ -13,16 +13,22 @@ else:
 		fs_available = True
 
 
-class FilesystemException(Exception):
+class PytahoeException(Exception):
 	pass
 
-class ObjectException(Exception):
+class FilesystemException(PytahoeException):
 	pass
 
-class UploadException(Exception):
+class ObjectException(PytahoeException):
 	pass
 
-class DependencyException(Exception):
+class UploadException(PytahoeException):
+	pass
+
+class DependencyException(PytahoeException):
+	pass
+
+class MountException(PytahoeException):
 	pass
 
 class Filesystem:
@@ -180,6 +186,10 @@ class Directory:
 				return dokan.mount(fs, mountpoint)
 			except OSError:
 				raise DependencyException("Could not mount the directory because both the FUSE and dokan libraries are unavailable.")
+			except RuntimeError, e:
+				raise MountException("Could not mount the directory because a dokan error was encountered: %s" % e.message)
+		except RuntimeError, e:
+			raise MountException("Could not mount the directory because a FUSE error was encountered: %s" % e.message)
 	
 	def upload(self, filedata, filename=None):
 		if filename is None:
