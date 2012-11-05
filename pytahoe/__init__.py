@@ -168,7 +168,7 @@ class Directory:
 		if fs_available == False:
 			raise DependencyException("Could not mount the directory because the 'fs' module was not found.")
 		
-		fs = TahoeLAFS(self.uri)
+		fs = TahoeLAFS(self.uri, webapi=self.filesystem.url)
 		
 		try:
 			return fuse.mount(fs, mountpoint)
