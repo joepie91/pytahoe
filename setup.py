@@ -25,5 +25,5 @@ setup(name='pytahoe',
       url='http://cryto.net/pytahoe',
       packages=['pytahoe'],
       provides=['pytahoe'],
-      requires=['fs', 'requests']
+      install_requires=['fs', 'requests']
      )
