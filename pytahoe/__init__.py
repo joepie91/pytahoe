@@ -195,7 +195,11 @@ class Filesystem:
 			raise ObjectException("Could not attach object - the request failed with code %d." % result.status_code)
 
 class Directory:
-	"""Represents a directory node in a Tahoe-LAFS grid."""
+	"""Represents a directory node in a Tahoe-LAFS grid.
+	
+	Properties:
+	children -- A dictionary of File and Directory objects, with their name as key.
+	"""
 	mutable = False
 	writeable = False
 	children = {}
