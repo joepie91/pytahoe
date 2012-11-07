@@ -290,15 +290,20 @@ class Directory:
 		
 		if filename is None:
 			if type(filedata) is str:
-				filename = self._sanitize_filename(os.path.basename(filedata))
+				filename = self.filesystem._sanitize_filename(os.path.basename(filedata))
 			elif type(filedata) is file:
 				if type(filedata.name) is str:
-					filename = self._sanitize_filename(filedata.name)
+					filename = self.filesystem._sanitize_filename(filedata.name)
 				else:
 					# We could not determine the filename for the input... let's generate something.
 					filename = ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(15))
 			else:
 				raise UploadException("The given file is not a valid string or file object.")
+		
+		new_file = self.filesystem.upload(filedata)
+		new_file.attach(self, filename)
+		
+		return new_file
 	
 	def attach(self, directory, filename=None, **kwargs):
 		"""Attach this Directory to a Directory in the filesystem.

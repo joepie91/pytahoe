@@ -18,15 +18,18 @@ import pytahoe
 
 fs = pytahoe.Filesystem("http://tahoe.ccnmtl.columbia.edu/")
 
-tfile = fs.File("URI:CHK:iyq5houj2fqavmnqccqezcssle:5px5tdctmmvci4al2r3vskpblhrepuugfe6ghiuutpe6cllvo36a:3:10:997")
-print tfile.read(65)
+#tfile = fs.File("URI:CHK:iyq5houj2fqavmnqccqezcssle:5px5tdctmmvci4al2r3vskpblhrepuugfe6ghiuutpe6cllvo36a:3:10:997")
+#print tfile.read(65)
 
 #print fs
 #
 #tfile = fs.upload("test.py")
 #print tfile
 #
-#tdir = fs.Directory("URI:DIR2:cbk47f5lybaj5qh6bm6eedezwe:m525plntx47u44xvf44r6rliec3gp6yeyio7olndibtke75zb6fa")
+tdir = fs.Directory("URI:DIR2:cbk47f5lybaj5qh6bm6eedezwe:m525plntx47u44xvf44r6rliec3gp6yeyio7olndibtke75zb6fa")
+
+print tdir.upload("test.py")
+
 #print tdir
 #
 #print tfile.attach(tdir, "sample // file 2.py")
