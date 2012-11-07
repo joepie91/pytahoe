@@ -28,7 +28,10 @@ fs = pytahoe.Filesystem("http://tahoe.ccnmtl.columbia.edu/")
 #
 tdir = fs.Directory("URI:DIR2:cbk47f5lybaj5qh6bm6eedezwe:m525plntx47u44xvf44r6rliec3gp6yeyio7olndibtke75zb6fa")
 
-print tdir.upload("test.py")
+print tdir.create_directory("testing subdir4")
+tdir.refresh()
+print tdir.children
+#print tdir.upload("test.py")
 
 #print tdir
 #

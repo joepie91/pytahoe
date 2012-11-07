@@ -126,7 +126,7 @@ class Filesystem:
 	def create_directory(self):
 		"""Create a new directory node in the filesystem, and return a Directory object representing it."""
 		
-		result = self.do_request("/uri?t=mkdir", {})
+		result = requests.post("%s/uri?t=mkdir" % self.url, {}).text
 		return self.Directory(result)
 	
 	def _sanitize_filename(self, name):
@@ -213,11 +213,25 @@ class Directory:
 		self.filesystem = filesystem
 		self.uri = uri
 		
+		# We always need to retrieve the data for a directory. Why? Because otherwise we have no data about the children.
+		self._get_data()
+	
+	def __repr__(self):
+		"""Returns a string representation for this Directory."""
+		
+		if self.writable == True:
+			state = "writable"
+		else:
+			state = "read-only"
+		
+		return "<pytahoe.Directory %s (%s)>" % (self.uri, state)
+		
+	def _get_data(self):
+		"""Actually retrieves the data for this Directory."""
+		data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(self.uri))).json
+		
 		if data is None:
-			data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(uri))).json
-			
-			if data is None:
-				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
+			raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "dirnode" in data:
 			details = data[1]
@@ -231,7 +245,11 @@ class Directory:
 			if "rw_uri" in details:
 				self.writable = True
 				self.writecap = details['rw_uri']
-				
+			else:
+				self.writable = False
+			
+			self.children = {}
+			
 			for child_name, child_data in details['children'].iteritems():
 				if "rw_uri" in child_data[1]:
 					child_uri = child_data[1]['rw_uri']
@@ -239,20 +257,11 @@ class Directory:
 					child_uri = child_data[1]['ro_uri']
 				
 				self.children[child_name] = self.filesystem.Object(child_uri, child_data)
+			
 		elif "unknown" in data:
 			raise ObjectException("The specified object does not appear to exist.")
 		else:
 			raise ObjectException("The specified object is not a directory.")
-	
-	def __repr__(self):
-		"""Returns a string representation for this Directory."""
-		
-		if self.writable == True:
-			state = "writable"
-		else:
-			state = "read-only"
-		
-		return "<pytahoe.Directory %s (%s)>" % (self.uri, state)
 	
 	def mount(self, mountpoint):
 		"""Mount this Directory to a mount point on the actual filesystem.
@@ -316,6 +325,23 @@ class Directory:
 		"""
 		
 		return self.filesystem.attach(self, directory, filename, **kwargs)
+		
+	def create_directory(self, name):
+		"""Creates a new subdirectory in this Directory.
+		
+		Note that the .children attribute of this Directory is not updated until the Directory.refresh() method is called.
+		
+		name -- The name for the subdirectory.
+		"""
+		
+		new_dir = self.filesystem.create_directory()
+		new_dir.attach(self, self.filesystem._sanitize_filename(name), writable=True)
+		
+		return new_dir
+		
+	def refresh(self):
+		"""Refreshes the data that this Directory object holds."""
+		self._get_data()
 
 class File:
 	"""Represents a file node in a Tahoe-LAFS grid."""
