@@ -316,6 +316,7 @@ class File:
 	"""Represents a file node in a Tahoe-LAFS grid."""
 	mutable = False
 	writable = False
+	request = None
 	
 	def __init__(self, filesystem, uri, data=None):
 		"""Create a new File object.
@@ -384,3 +385,18 @@ class File:
 		"""
 		
 		return self.filesystem.attach(self, directory, filename, **kwargs)
+		
+	def read(self, length=None):
+		"""Read from the File and return the output.
+		
+		Keyword arguments:
+		length -- The amount of bytes to read.
+		"""
+		if self.request is None:
+			self.request = requests.get("%s/uri/%s" % (self.filesystem.url, self.uri), prefetch=False)
+		
+		if length is None:
+			return self.request.content
+		else:
+			return self.request.raw.read(amt=length)
+			
