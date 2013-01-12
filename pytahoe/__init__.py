@@ -54,13 +54,12 @@ class Filesystem:
 			url = url[:-1]
 		
 		try:
-			data = requests.get("%s/statistics?t=json" % url).json
+			data = requests.get("%s/statistics?t=json" % url).json()
 		except requests.exceptions.RequestException:
 			raise FilesystemException("The provided WAPI URL is either not reachable, or not running a recent version of Tahoe-LAFS.")
-		
-		if data is None:
+		except:
 			raise FilesystemException("The provided URL is not running a recent version of Tahoe-LAFS.")
-		
+			
 		self.url = url
 		self.start_date = time.time() - data['stats']['node.uptime']
 	
@@ -77,9 +76,9 @@ class Filesystem:
 		"""
 		
 		if data is None:
-			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
-			
-			if data is None:
+			try:
+				data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json()
+			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		return Directory(self, uri, data)
@@ -94,9 +93,9 @@ class Filesystem:
 		"""
 		
 		if data is None:
-			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
-			
-			if data is None:
+			try:
+				data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json()
+			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		return File(self, uri, data)
@@ -111,9 +110,9 @@ class Filesystem:
 		"""
 		
 		if data is None:
-			data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json
-			
-			if data is None:
+			try:
+				data = requests.get("%s/uri/%s?t=json" % (self.url, urllib.quote(uri))).json()
+			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "filenode" in data:
@@ -232,9 +231,9 @@ class Directory:
 		
 	def _get_data(self):
 		"""Actually retrieves the data for this Directory."""
-		data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(self.uri))).json
-		
-		if data is None:
+		try:
+			data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(self.uri))).json()
+		except:
 			raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "dirnode" in data:
@@ -367,9 +366,9 @@ class File:
 		self.uri = uri
 		
 		if data is None:
-			data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(uri))).json
-			
-			if data is None:
+			try:
+				data = requests.get("%s/uri/%s?t=json" % (self.filesystem.url, urllib.quote(uri))).json()
+			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "filenode" in data:
