@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pytahoe',
-      version='1.0.1',
+      version='1.0.2',
       description='Python module for working with the Tahoe-LAFS filesystem.',
       long_description='''
 	This module allows for easy interaction with a Tahoe-LAFS grid, via the WebAPI.
