@@ -283,17 +283,26 @@ class Directory:
 		
 		fs = TahoeLAFS(self.uri, webapi=self.filesystem.url)
 		
+		mount_failed = False
+		
 		try:
 			return fuse.mount(fs, mountpoint)
 		except OSError:
+			mount_failed = True
+		except NameError:
+			mount_failed = True
+		except RuntimeError, e:
+			raise MountException("Could not mount the directory because a FUSE error was encountered: %s" % e.message)
+		
+		if mount_failed:
 			try:
 				return dokan.mount(fs, mountpoint)
 			except OSError:
 				raise DependencyException("Could not mount the directory because both the FUSE and dokan libraries are unavailable.")
+			except NameError:
+				raise DependencyException("Could not mount the directory because both the FUSE and dokan libraries are unavailable.")
 			except RuntimeError, e:
 				raise MountException("Could not mount the directory because a dokan error was encountered: %s" % e.message)
-		except RuntimeError, e:
-			raise MountException("Could not mount the directory because a FUSE error was encountered: %s" % e.message)
 	
 	def upload(self, filedata, filename=None):
 		"""Upload a file to the storage grid and return a File object representing it.
