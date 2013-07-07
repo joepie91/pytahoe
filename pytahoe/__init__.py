@@ -1,16 +1,20 @@
 import json, time, os, re, requests, urllib
 
+fs_available = True
+
 try:
 	from fs.contrib.tahoelafs import TahoeLAFS
 except ImportError:
 	fs_available = False
 else:
 	try:
-		from fs.expose import fuse, dokan
+		from fs.expose import fuse
 	except ImportError:
-		fs_available = false
-	else:
-		fs_available = True
+		try:
+			from fs.expose import dokan
+		except ImportError:
+			fs_available = False
+		
 
 
 class PytahoeException(Exception):
