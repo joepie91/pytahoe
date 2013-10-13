@@ -41,7 +41,7 @@ class MountException(PytahoeException):
 	"""Exception class for errors encountered during mounting of a directory."""
 	pass
 
-class Filesystem:
+class Filesystem(object):
 	"""Represents a Tahoe-LAFS 'filesystem' or 'grid'."""
 	
 	def __init__(self, url="http://localhost:3456/"):
@@ -197,7 +197,10 @@ class Filesystem:
 		else:
 			raise ObjectException("Could not attach object - the request failed with code %d." % result.status_code)
 
-class Directory:
+class Node(object):
+	pass
+
+class Directory(Node):
 	"""Represents a directory node in a Tahoe-LAFS grid.
 	
 	Properties:
@@ -359,7 +362,7 @@ class Directory:
 		"""Refreshes the data that this Directory object holds."""
 		self._get_data()
 
-class File:
+class File(Node):
 	"""Represents a file node in a Tahoe-LAFS grid."""
 	mutable = False
 	writable = False
