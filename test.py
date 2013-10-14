@@ -27,15 +27,18 @@ print "Get filesystem"
 #tfile = fs.upload("test.py")
 #print tfile
 #
-tdir = fs.Directory("URI:DIR2:73a5pbgk2wpgtjylw4x6d3p4ne:ygfn7uzmpyzrat7u2yigalhqlf77xq5uavc3fvaphsnlncoy5hnq")
-print "Get dir"
-print tdir.create_directory("testing subdir4")
-print "Create dir"
-tdir.refresh()
-print "Refresh"
-print tdir.children
-print "Children"
-#print tdir.upload("test.py")
+tdir = fs.Directory("URI:DIR2:5fe3oenfxnhgtdflhpemevse44:rz7u4gq56kxtu5toodzbm433gkaitxpdlpeoamvpygs6pxw2jzsq")
+#print "Get dir"
+subdir = tdir.create_directory("herp")
+#print "Create dir"
+#tdir.refresh()
+#print "Refresh"
+#print tdir.children
+#print "Children"
+f = subdir.upload("test.py")
+print f
+#f.unlink()
+subdir.unlink()
 
 #print tdir
 #

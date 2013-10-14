@@ -70,7 +70,7 @@ class Filesystem(object):
 	def __repr__(self):
 		return "<pytahoe.Filesystem %s>" % self.url
 	
-	def Directory(self, uri, data=None):
+	def Directory(self, uri, data=None, path=None):
 		"""Create and return a new Directory object for the specified URI for this filesystem.
 		
 		uri -- The URI to represent
@@ -85,9 +85,12 @@ class Filesystem(object):
 			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
-		return Directory(self, uri, data)
+		if path is None:
+			path = uri.split("/")
+		
+		return Directory(self, path, uri, data)
 	
-	def File(self, uri, data=None):
+	def File(self, uri, data=None, path=None):
 		"""Create and return a new File object for the specified URI for this filesystem.
 		
 		uri -- The URI to represent
@@ -102,9 +105,12 @@ class Filesystem(object):
 			except:
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
-		return File(self, uri, data)
+		if path is None:
+			path = uri.split("/")
+		
+		return File(self, path, uri, data)
 	
-	def Object(self, uri, data=None):
+	def Object(self, uri, data=None, path=None):
 		"""Create and return a new Directory or File object for this filesystem, depending on what the URI represents.
 		
 		uri -- The URI to represent
@@ -120,9 +126,9 @@ class Filesystem(object):
 				raise FilesystemException("Could not reach the WAPI or did not receive a valid response.")
 		
 		if "filenode" in data:
-			return self.File(uri, data)
+			return self.File(uri, data, path=path)
 		elif "dirnode" in data:
-			return self.Directory(uri, data)
+			return self.Directory(uri, data, path=path)
 		else:
 			raise ObjectException("The specified object does not appear to exist.")
 	
@@ -130,13 +136,13 @@ class Filesystem(object):
 		"""Create a new directory node in the filesystem, and return a Directory object representing it."""
 		
 		result = requests.post("%s/uri?t=mkdir" % self.url, {}).text
-		return self.Directory(result)
+		return self.Directory(result, path=[result])
 	
 	def _sanitize_filename(self, name):
 		"""Strip all potentially unsafe characters from the given filename."""
 		return re.sub("[^a-zA-Z0-9 $_.+!*'(),-]+", "", name)
 	
-	def upload(self, filedata):
+	def upload(self, filedata, path=None):
 		"""Uploads a file to the storage grid and returns a File object representing it.
 		
 		filedata -- Either a file-like object, or the path to a file.
@@ -151,7 +157,7 @@ class Filesystem(object):
 			raise UploadException("Cannot upload the file because the given file is not a valid file object or path.")
 				
 		file_uri = requests.put("%s/uri" % self.url, data=filedata.read()).text
-		return self.File(file_uri)
+		return self.File(file_uri, path=path)
 		
 	def attach(self, obj, directory, filename, **kwargs):
 		"""Attaches an object to a file node in the filesystem.
@@ -198,7 +204,11 @@ class Filesystem(object):
 			raise ObjectException("Could not attach object - the request failed with code %d." % result.status_code)
 
 class Node(object):
-	pass
+	def unlink(self):
+		if len(self.path) < 2:
+			raise ObjectException("Cannot delete (unlink) object; does not have a known parent URI.")
+			
+		requests.post("%s/uri/%s?t=delete&name=%s" % (self.filesystem.url, "/".join(self.path[:-1]), self.path[-1]))
 
 class Directory(Node):
 	"""Represents a directory node in a Tahoe-LAFS grid.
@@ -210,7 +220,7 @@ class Directory(Node):
 	writeable = False
 	children = {}
 	
-	def __init__(self, filesystem, uri, data=None):
+	def __init__(self, filesystem, path, uri, data=None):
 		"""Creates a new Directory object.
 		
 		filesystem -- The Filesystem this Directory belongs to.
@@ -222,6 +232,7 @@ class Directory(Node):
 		
 		self.filesystem = filesystem
 		self.uri = uri
+		self.path = path
 		
 		# We always need to retrieve the data for a directory. Why? Because otherwise we have no data about the children.
 		self._get_data()
@@ -266,7 +277,7 @@ class Directory(Node):
 				else:
 					child_uri = child_data[1]['ro_uri']
 				
-				self.children[child_name] = self.filesystem.Object(child_uri, child_data)
+				self.children[child_name] = self.filesystem.Object(child_uri, child_data, path=self.path+[child_name])
 			
 		elif "unknown" in data:
 			raise ObjectException("The specified object does not appear to exist.")
@@ -328,7 +339,7 @@ class Directory(Node):
 			else:
 				raise UploadException("The given file is not a valid string or file object.")
 		
-		new_file = self.filesystem.upload(filedata)
+		new_file = self.filesystem.upload(filedata, path=self.path+[filename])
 		new_file.attach(self, filename)
 		
 		return new_file
@@ -355,6 +366,7 @@ class Directory(Node):
 		
 		new_dir = self.filesystem.create_directory()
 		new_dir.attach(self, self.filesystem._sanitize_filename(name), writable=True)
+		new_dir.path = self.path + [name]
 		
 		return new_dir
 		
@@ -368,7 +380,7 @@ class File(Node):
 	writable = False
 	request = None
 	
-	def __init__(self, filesystem, uri, data=None):
+	def __init__(self, filesystem, path, uri, data=None):
 		"""Create a new File object.
 		
 		filesystem -- The filesystem this File belongs to.
@@ -380,6 +392,7 @@ class File(Node):
 		
 		self.filesystem = filesystem
 		self.uri = uri
+		self.path = path
 		
 		if data is None:
 			try:
